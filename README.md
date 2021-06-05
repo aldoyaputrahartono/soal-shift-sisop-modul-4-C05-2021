@@ -67,7 +67,7 @@ int slash_id(char *path, int mentok)
 }
 ```
 
-Untuk melakukan enkripsi dan dekripsi akan dibuat fungsi tersendiri.
+Untuk melakukan enkripsi dan dekripsi menggunakan Atbash cipher akan dibuat fungsi tersendiri.
 
 ```c
 void encryptAtbash(char *path)
@@ -149,11 +149,208 @@ Ketika diakses melalui filesystem hanya akan muncul Suatu_File.txt
 
 #
 ### Jawab 2
-jawab 2
+Pada utility functions `RENAME` dilakukan pengecekan apakah direktori direname dengan menambahkan `RX_` atau menghilangkan `RX_` dengan fungsi strstr().
+
+```c
+static int xmp_rename(const char *from, const char *to)
+{
+	int res;
+	char frompath[1000], topath[1000];
+	
+	char *a = strstr(to, atoz);
+	if (a != NULL) decryptAtbash(a);
+	
+	char *b = strstr(from, rx);
+	if (b != NULL){
+		decryptRot13(b);
+		decryptAtbash(b);
+	}
+	
+	char *c = strstr(to, rx);
+	if (c != NULL){
+		decryptRot13(c);
+		decryptAtbash(c);
+	}
+
+	sprintf(frompath, "%s%s", dirPath, from);
+	sprintf(topath, "%s%s", dirPath, to);
+
+	res = rename(frompath, topath);
+	if (res == -1) return -errno;
+
+	tulisLog2("RENAME", frompath, topath);
+	
+	if (c != NULL){
+		enkripsi2(topath);
+		tulisLog2("ENCRYPT2", from, to);
+	}
+
+	if (b != NULL && c == NULL){
+		dekripsi2(topath);
+		tulisLog2("DECRYPT2", from, to);
+	}
+	
+	...
+
+	return 0;
+}
+```
+
+Jika terdeteksi `RX_` pada path tujuan berarti direktori direname dengan menambahkan `RX_` dan dilanjutkan dengan memecahkan file pada fungsi enkripsi2.
+
+```c
+void enkripsi2(char *fpath)
+{
+	chdir(fpath);
+	DIR *dp;
+	struct dirent *dir;
+	
+	dp = opendir(".");
+	if(dp == NULL) return;
+	struct stat lol;
+	char dirPath[1000];
+	char filePath[1000];
+	
+	while ((dir = readdir(dp)) != NULL){
+		printf("dirname %s\n", dir->d_name);
+		printf("%s/%s\n", fpath, dir->d_name);
+		if (stat(dir->d_name, &lol) < 0);
+		else if (S_ISDIR(lol.st_mode)){
+			if (strcmp(dir->d_name,".") == 0 || strcmp(dir->d_name,"..") == 0) continue;
+			sprintf(dirPath,"%s/%s",fpath, dir->d_name);
+			enkripsi2(dirPath);
+			printf("dirpath %s\n", dirPath);
+		}
+		else{
+			sprintf(filePath,"%s/%s",fpath,dir->d_name);
+			FILE *input = fopen(filePath, "r");
+			if (input == NULL) return;
+			int bytes_read, count = 0;
+			void *buffer = malloc(1024);
+			while((bytes_read = fread(buffer, 1, 1024, input)) > 0){
+				char newFilePath[1000];
+				sprintf(newFilePath, "%s.%04d", filePath, count);
+				count++;
+				FILE *output = fopen(newFilePath, "w+");
+				if(output == NULL) return;
+				fwrite(buffer, 1, bytes_read, output);
+				fclose(output);
+				memset(buffer, 0, 1024);
+			}
+			fclose(input);
+			printf("filepath %s\n", filePath);
+			remove(filePath);
+		}
+	}
+	closedir(dp);
+}
+```
+
+Jika terdeteksi `RX_` pada path asal dan tidak terdeteksi `RX_` pada path tujuan berarti direktori direname dengan menghilangkan `RX_` dan dilanjutkan dengan menggabungkan file pada fungsi dekripsi2.
+
+```c
+void dekripsi2(char *dir)
+{
+	chdir(dir);
+	DIR *dp;
+	struct dirent *de;
+	struct stat lol;
+	dp = opendir(".");
+	if (dp == NULL) return;
+	
+	char dirPath[1000];
+	char filePath[1000];
+	
+	while ((de = readdir(dp)) != NULL){
+		if (stat(de->d_name, &lol) < 0);
+		else if (S_ISDIR(lol.st_mode)){
+			if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) continue;
+			sprintf(dirPath, "%s/%s", dir, de->d_name);
+			dekripsi2(dirPath);
+		}
+		else{
+			sprintf(filePath, "%s/%s", dir, de->d_name);
+			filePath[strlen(filePath) - 5] = '\0';
+			FILE *check = fopen(filePath, "r");
+			if (check != NULL) return;
+			FILE *file = fopen(filePath, "w");
+			int count = 0;
+			char topath[1000];
+			sprintf(topath, "%s.%04d", filePath, count);
+			void *buffer = malloc(1024);
+			while (1){
+				FILE *op = fopen(topath, "rb");
+				if (op == NULL) break;
+				size_t readSize = fread(buffer, 1, 1024, op);
+				fwrite(buffer, 1, readSize, file);
+				fclose(op);
+				remove(topath);
+				count++;
+				sprintf(topath, "%s.%04d", filePath, count);
+			}
+			free(buffer);
+			fclose(file);
+		}
+	}
+	closedir(dp);
+}
+```
+
+Untuk melakukan enkripsi dan dekripsi menggunakan ROT13 cipher akan dibuat fungsi tersendiri.
+
+```c
+void encryptRot13(char *path)
+{
+	if (!strcmp(path, ".") || !strcmp(path, "..")) return;
+	
+	printf("encrypt path ROT13: %s\n", path);
+	
+	int endid = split_ext_id(path);
+	int startid = slash_id(path, 0);
+	
+	for (int i = startid; i < endid; i++){
+		if (path[i] != '/' && isalpha(path[i])){
+			char tmp = path[i];
+			if(isupper(path[i])) tmp -= 'A';
+			else tmp -= 'a';
+			tmp = (tmp + 13) % 26; //ROT13 cipher
+			if(isupper(path[i])) tmp += 'A';
+			else tmp += 'a';
+			path[i] = tmp;
+		}
+	}
+}
+
+void decryptRot13(char *path)
+{
+	if (!strcmp(path, ".") || !strcmp(path, "..")) return;
+	
+	printf("decrypt path ROT13: %s\n", path);
+	
+	int endid = split_ext_id(path);
+	int startid = slash_id(path, endid);
+	
+	for (int i = startid; i < endid; i++){
+		if (path[i] != '/' && isalpha(path[i])){
+			char tmp = path[i];
+			if(isupper(path[i])) tmp -= 'A';
+			else tmp -= 'a';
+			tmp = (tmp + 13) % 26; //ROT13 cipher
+			if(isupper(path[i])) tmp += 'A';
+			else tmp += 'a';
+			path[i] = tmp;
+		}
+	}
+}
+```
+
+Pemanggilan fungsi dekripsi dilakukan pada tiap utility functions getattr, mkdir, rename, rmdir, create, dan fungsi-fungsi lain yang menurut kami esensial dalam proses sinkronisasi FUSE dan mount folder. Fungsi dekripsi dan enkripsi dilakukan di utility function readdir karena FUSE akan melakukan dekripsi di mount folder lalu enkripsi di FUSE saat readdir. Pemanggilannya dilakukan dengan pengecekan apakah string `RX_` terdapat di string path di masing-masing utility function dengan menggunakan fungsi strstr(). Jika ya, maka fungsi enkripsi dan dekripsi akan dipanggil untuk string tersebut dengan `RX_` sebagai starting point string yang diteruskan. Untuk pencatatan log akan dijelaskan pada soal nomor 4.
 
 #
 ### Kendala
-1. Kendala
+1. Bingung menentukan apakah direktori tersebut baru saja dibuat (mkdir) atau direname (rename) karena berpengaruh pada metode dekripsi yang akan dilakukan.
+2. Pada Vigenere cipher saat dicek dengan printf terlihat sudah menghasilkan path yang benar tapi file tersebut tidak muncul pada FUSE sehingga sementara kami memakai ROT13 cipher semua.
+3. Sedikit kesusahan saat akan melakukan split dan join karena tidak boleh memakai exec*(). Pada direktori asli file sudah terpecah, tetapi pada FUSE juga tertampil file yang terpecah kecuali `RX_` dihilangkan dan file tergabung kembali.
 
 #
 ## Penyelesaian Soal No.3
