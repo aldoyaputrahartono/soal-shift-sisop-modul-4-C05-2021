@@ -118,7 +118,36 @@ INFO::28052021-10:01:00:RENAME::/test.txt::/rename.txt
 
 #
 ### Jawab 4
-jawab 4
+Untuk soal ini kita diminta untuk membuat log system yang bertujuan untuk memudahkan dalam memonitor kegiatan pada file system. Disini kita membuat dua fungsi dalam pembuatan log system ini yaitu fungsi `tulisLog` dan `tulisLog2` perbedaannya terdapat pada DESC (informasi dan parameter tambahan) yang perlu dicantumkan dalam format untuk loggingnya. Dalam menuliskan log system sesuai format yang ada kita perlu mencari waktu sekarang untuk nanti dicantumkan dalam log systemnya. Dalam fungsi `tulisLog` kita juga memasukkan parameter `char *nama` yang mana adalah System Call dan `char *fpath` adalah deskripsi mengenai file yang ada.
+```
+void tulisLog(char *nama, char *fpath)
+{
+	time_t rawtime;
+	struct tm *timeinfo;
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+  ...
+```
+Selanjutnya kita inisialisasi sebuah array of char atau string `char haha[1000];` untuk nanti menyimpan perintah system call yang telah dijalankan pada filesystem dan mencatatnya dalam file `SinSeiFS.log`. Lalu kita perlu membuka file `SinSeiFS.log` pada direktori home pengguna dengan mode `a` agar nanti bisa dituliskan log yang baru dan jika file belum ada maka akan dibuat file yang baru. 
+```
+FILE *file;
+file = fopen("/home/aldo/SinSeiFS.log", "a");
+```
+Selanjutnya kita bisa melakukan pengecekan pada syscall yang ada pada parameter. Jika syscall adalah `RMDIR` atau `UNLINK` maka log levelnya akan dicatat `WARNING` namun jika tidak maka log levelnya akan dicatat `INFO`. Dan akan dicatat juga waktu sekarang beserta keterangan lainnya.
+```
+if (strcmp(nama, "RMDIR") == 0 || strcmp(nama, "UNLINK") == 0)
+		sprintf(haha, "WARNING::%.2d%.2d%d-%.2d:%.2d:%.2d::%s::%s\n", timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year + 1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, nama, fpath);
+	else
+		sprintf(haha, "INFO::%.2d%.2d%d-%.2d:%.2d:%.2d::%s::%s\n", timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year + 1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, nama, fpath);
+```
+Langkah terakhir kita tuliskan log yang ada kedalam file `SinSeiFS.log` dan kita tutup filenya.
+```
+  fputs(haha, file);
+	fclose(file);
+	return;
+}
+```
+
 
 #
 ### Kendala
