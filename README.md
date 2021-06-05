@@ -364,17 +364,211 @@ c. Apabila direktori yang terenkripsi di-rename dengan menghapus `A_is_a_` pada 
 
 d. Direktori spesial adalah direktori yang mengembalikan enkripsi/encoding pada direktori `AtoZ_` maupun `RX_` namun masing-masing aturan mereka tetap berjalan pada direktori di dalamnya (sifat recursive  `AtoZ_` dan `RX_` tetap berjalan pada subdirektori).
 
-e. Pada direktori spesial semua nama file (tidak termasuk ekstensi) pada fuse akan berubah menjadi lowercase insensitive dan diberi ekstensi baru berupa nilai desimal dari binner perbedaan namanya.
+e. Pada direktori spesial semua nama file (tidak termasuk ekstensi) pada fuse akan berubah menjadi lowercase insensitive dan diberi ekstensi baru berupa nilai desimal dari biner perbedaan namanya.
 
 Contohnya jika pada direktori asli nama filenya adalah `FiLe_CoNtoH.txt` maka pada fuse akan menjadi `file_contoh.txt.1321`. 1321 berasal dari biner 10100101001.
 
 #
 ### Jawab 3
-jawab 3
+Pada utility functions `RENAME` dilakukan pengecekan apakah direktori direname dengan menambahkan `A_is_a_` atau menghilangkan `A_is_a_` dengan fungsi strstr().
+
+```c
+static int xmp_rename(const char *from, const char *to)
+{
+	int res;
+	char frompath[1000], topath[1000];
+	
+	...
+
+	sprintf(frompath, "%s%s", dirPath, from);
+	sprintf(topath, "%s%s", dirPath, to);
+
+	res = rename(frompath, topath);
+	if (res == -1) return -errno;
+
+	tulisLog2("RENAME", frompath, topath);
+	
+	...
+	
+	if (strstr(to, aisa) != NULL){
+		encryptBinary(topath);
+		tulisLog2("ENCRYPT3", from, to);
+	}
+	
+	if (strstr(from, aisa) != NULL && strstr(to, aisa) == NULL){
+		decryptBinary(topath);
+		tulisLog2("DECRYPT3", from, to);
+	}
+
+	return 0;
+}
+```
+
+Jika terdeteksi `A_is_a_` pada path tujuan berarti direktori direname dengan menambahkan `A_is_a_`. Maka dilanjutkan dengan mengubah nama file menjadi lowercase dan menambahkan nilai desimalnya sebagai ekstensi yang baru pada fungsi encryptBinary.
+
+```c
+void getBinary(char *fname, char *bin, char *lowercase){
+	int endid = ext_id(fname);
+	int startid = slash_id(fname, 0);
+	int i;
+	
+	for(i=startid; i<endid; i++){
+		if(isupper(fname[i])){
+			bin[i] = '1';
+			lowercase[i] = fname[i] + 32;
+		}
+		else{
+			bin[i] = '0';
+			lowercase[i] = fname[i];
+		}
+	}
+	bin[endid] = '\0';
+	
+	for(; i<strlen(fname); i++){
+		lowercase[i] = fname[i];
+	}
+	lowercase[i] = '\0';
+}
+
+int bin_to_dec(char *bin){
+	int tmp = 1, res = 0;
+	for(int i=strlen(bin)-1; i>=0; i--){
+		if(bin[i] == '1') res += tmp;
+		tmp *= 2;
+	}
+	return res;
+}
+
+void encryptBinary(char *fpath)
+{
+	chdir(fpath);
+	DIR *dp;
+	struct dirent *dir;
+	struct stat lol;
+	dp = opendir(".");
+	if(dp == NULL) return;
+	
+	char dirPath[1000];
+	char filePath[1000];
+	char filePathBinary[1000];
+	
+	while ((dir = readdir(dp)) != NULL){
+		if (stat(dir->d_name, &lol) < 0);
+		else if (S_ISDIR(lol.st_mode)){
+			if (strcmp(dir->d_name,".") == 0 || strcmp(dir->d_name,"..") == 0) continue;
+			sprintf(dirPath,"%s/%s",fpath, dir->d_name);
+			encryptBinary(dirPath);
+		}
+		else{
+			sprintf(filePath,"%s/%s",fpath, dir->d_name);
+			char bin[1000], lowercase[1000];
+			getBinary(dir->d_name, bin, lowercase);
+			int dec = bin_to_dec(bin);
+			sprintf(filePathBinary,"%s/%s.%d",fpath,lowercase,dec);
+			rename(filePath, filePathBinary);
+		}
+	}
+	closedir(dp);
+}
+
+```
+
+Jika terdeteksi `A_is_a_` pada path asal dan tidak terdeteksi `A_is_a_` pada path tujuan berarti direktori direname dengan menghilangkan `A_is_a_`. Maka dilanjutkan dengan mengubah nama file menjadi semula dengan bantuan nilai desimalnya pada fungsi decryptBinary.
+
+```c
+int convertDec(char *ext){
+	int dec = 0, pengali = 1;
+	for(int i=strlen(ext)-1; i>=0; i--){
+		dec += (ext[i]-'0')*pengali;
+		pengali *= 10;
+	}
+	return dec;
+}
+
+void dec_to_bin(int dec, char *bin, int len){
+	int idx = 0;
+	while(dec){
+		if(dec & 1) bin[idx] = '1';
+		else bin[idx] = '0';
+		idx++;
+		dec /= 2;
+	}
+	while(idx < len){
+		bin[idx] = '0';
+		idx++;
+	}
+	bin[idx] = '\0';
+	
+	for(int i=0; i<idx/2; i++){
+		char tmp = bin[i];
+		bin[i] = bin[idx-1-i];
+		bin[idx-1-i] = tmp;
+	}
+}
+
+void getDecimal(char *fname, char *bin, char *normalcase){
+	int endid = ext_id(fname);
+	int startid = slash_id(fname, 0);
+	int i;
+	
+	for(i=startid; i<endid; i++){
+		if(bin[i-startid] == '1') normalcase[i-startid] = fname[i] - 32;
+		else normalcase[i-startid] = fname[i];
+	}
+	
+	for(; i<strlen(fname); i++){
+		normalcase[i-startid] = fname[i];
+	}
+	normalcase[i-startid] = '\0';
+}
+
+void decryptBinary(char *fpath)
+{
+	chdir(fpath);
+	DIR *dp;
+	struct dirent *dir;
+	struct stat lol;
+	dp = opendir(".");
+	if(dp == NULL) return;
+	
+	char dirPath[1000];
+	char filePath[1000];
+	char filePathDecimal[1000];
+	
+	while ((dir = readdir(dp)) != NULL){
+		if (stat(dir->d_name, &lol) < 0);
+		else if (S_ISDIR(lol.st_mode)){
+			if (strcmp(dir->d_name,".") == 0 || strcmp(dir->d_name,"..") == 0) continue;
+			sprintf(dirPath,"%s/%s",fpath, dir->d_name);
+			decryptBinary(dirPath);
+		}
+		else{
+			sprintf(filePath,"%s/%s",fpath, dir->d_name);
+			char fname[1000], bin[1000], normalcase[1000], clearPath[1000];
+			
+			strcpy(fname, dir->d_name);
+			char *ext = strrchr(fname, '.');
+			int dec = convertDec(ext+1);
+			for(int i=0; i<strlen(fname)-strlen(ext); i++) clearPath[i] = fname[i];
+			
+			char *ext2 = strrchr(clearPath, '.');
+			dec_to_bin(dec, bin, strlen(clearPath)-strlen(ext2));
+			getDecimal(clearPath, bin, normalcase);
+			sprintf(filePathDecimal,"%s/%s",fpath,normalcase);
+			rename(filePath, filePathDecimal);
+		}
+	}
+	closedir(dp);
+}
+```
+
+Untuk pencatatan log akan dijelaskan pada soal nomor 4.
 
 #
 ### Kendala
-1. Kendala
+1. Agak bingung dengan maksud dari direktori spesial.
+2. Sedikit bingung saat melakukan dekripsi karena perlu mengambil nilai desimalnya yang ada di paling belakang nama file.
+3. Biner menggunakan tipe data array of char karena ditakutkan overflow pada integer. Hal ini menyebabkan konversi biner ke desimal dan sebaliknya sedikit terkendala.
 
 #
 ## Penyelesaian Soal No.4
