@@ -33,6 +33,10 @@ e. Metode encode pada suatu direktori juga berlaku terhadap direktori yang ada d
 #
 ### Jawab 1
 jawab 1
+pada soal ini kita diminta untuk melakukan beberapa hal seperti ketika sebuah direktori diawali dengan nama ```AtoZ_ ```, maka direktori tersebut akan menjadi direktori ter-encode,lalu ketika direktori di rename dengan nama ```Atoz_```,maka direktori tersebut akan menjadi direktori ter-encode,lalu ketika direktori yang terenskripsi di rename menjadi tidak ter encode,maka isi direktori tersebut akan terdecode,lalu setiap pembuatan direktori ter-encode (mkdir atau rename) maka akan tercatat ke sebuah log. format **/home/[USER]/Downloads/[Nama Direktori] → /home/[USER]/Downloads/AtoZ_[Nama Direktori]** lalu metode encode pada suatu direktori juga berlaku terhadap direktori yang ada didalamnya.
+
+pertama kita bisa membuat fungsi ```encryptAtbash``` dan ```decryptAtbash```
+
 
 #
 ### Kendala
