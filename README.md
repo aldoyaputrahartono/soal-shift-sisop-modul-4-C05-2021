@@ -175,4 +175,5 @@ Lalu untuk implementasinya kita masukkan fungsi-fungsi ini kedalam setiap fungsi
 
 #
 ### Kendala
-1. Kendala
+1. Sewaktu pencatatan pada file sempat terjadi kendala karena berbeda dengan format yang diberikan.
+2. Ada kesulitan dalam mengambil waktu sekarang (real time) dan pada pencatatannya.
