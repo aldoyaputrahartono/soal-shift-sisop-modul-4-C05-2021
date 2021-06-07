@@ -120,6 +120,15 @@ void decryptAtbash(char *path)
 Pemanggilan fungsi dekripsi dilakukan pada tiap utility functions getattr, mkdir, rename, rmdir, create, dan fungsi-fungsi lain yang menurut kami esensial dalam proses sinkronisasi FUSE dan mount folder. Fungsi dekripsi dan enkripsi dilakukan di utility function readdir karena FUSE akan melakukan dekripsi di mount folder lalu enkripsi di FUSE saat readdir. Pemanggilannya dilakukan dengan pengecekan apakah string `AtoZ_` terdapat di string path di masing-masing utility function dengan menggunakan fungsi strstr(). Jika ya, maka fungsi enkripsi dan dekripsi akan dipanggil untuk string tersebut dengan `AtoZ_` sebagai starting point string yang diteruskan. Untuk pencatatan log akan dijelaskan pada soal nomor 4.
 
 #
+### Gambar
+- Kondisi awal
+![11](https://user-images.githubusercontent.com/31863229/121061825-8a37f900-c7ee-11eb-9924-65a0bf4f5102.PNG)
+- Kondisi setelah enkripsi
+![12](https://user-images.githubusercontent.com/31863229/121061746-6f658480-c7ee-11eb-86a9-8d875f998fb4.PNG)
+- Kondisi setelah dekripsi
+![11](https://user-images.githubusercontent.com/31863229/121061825-8a37f900-c7ee-11eb-9924-65a0bf4f5102.PNG)
+
+#
 ### Kendala
 1. Sempat salah enkripsi dan dekripsi pada fungsi readdir sehingga file tidak tertampil pada FUSE.
 2. Sedikit kebingungan saat menentukan utility functions mana saja yang akan dipakai. Akhirnya kami memasang semuanya.
@@ -347,6 +356,15 @@ void decryptRot13(char *path)
 Pemanggilan fungsi dekripsi dilakukan pada tiap utility functions getattr, mkdir, rename, rmdir, create, dan fungsi-fungsi lain yang menurut kami esensial dalam proses sinkronisasi FUSE dan mount folder. Fungsi dekripsi dan enkripsi dilakukan di utility function readdir karena FUSE akan melakukan dekripsi di mount folder lalu enkripsi di FUSE saat readdir. Pemanggilannya dilakukan dengan pengecekan apakah string `RX_` terdapat di string path di masing-masing utility function dengan menggunakan fungsi strstr(). Jika ya, maka fungsi enkripsi dan dekripsi akan dipanggil untuk string tersebut dengan `RX_` sebagai starting point string yang diteruskan. Untuk pencatatan log akan dijelaskan pada soal nomor 4.
 
 #
+### Gambar
+- Kondisi awal
+![21](https://user-images.githubusercontent.com/31863229/121061783-7d1b0a00-c7ee-11eb-876a-0b3200353e29.PNG)
+- Kondisi setelah enkripsi
+![22](https://user-images.githubusercontent.com/31863229/121061821-8906cc00-c7ee-11eb-853b-1eadf17b0cbc.PNG)
+- Kondisi setelah dekripsi
+![21](https://user-images.githubusercontent.com/31863229/121061783-7d1b0a00-c7ee-11eb-876a-0b3200353e29.PNG)
+
+#
 ### Kendala
 1. Bingung menentukan apakah direktori tersebut baru saja dibuat (mkdir) atau direname (rename) karena berpengaruh pada metode dekripsi yang akan dilakukan.
 2. Pada Vigenere cipher saat dicek dengan printf terlihat sudah menghasilkan path yang benar tapi file tersebut tidak muncul pada FUSE sehingga sementara kami memakai ROT13 cipher semua.
@@ -565,6 +583,15 @@ void decryptBinary(char *fpath)
 Untuk pencatatan log akan dijelaskan pada soal nomor 4.
 
 #
+### Gambar
+- Kondisi awal
+![31](https://user-images.githubusercontent.com/31863229/121061895-a50a6d80-c7ee-11eb-9924-bd254073db3e.PNG)
+- Kondisi setelah enkripsi
+![32](https://user-images.githubusercontent.com/31863229/121061900-a5a30400-c7ee-11eb-930f-c0d20c4193f4.PNG)
+- Kondisi setelah dekripsi
+![31](https://user-images.githubusercontent.com/31863229/121061895-a50a6d80-c7ee-11eb-9924-bd254073db3e.PNG)
+
+#
 ### Kendala
 1. Agak bingung dengan maksud dari direktori spesial.
 2. Sedikit bingung saat melakukan dekripsi karena perlu mengambil nilai desimalnya yang ada di paling belakang nama file.
@@ -661,6 +688,10 @@ void tulisLog2(char *nama, const char *from, const char *to)
 ```
 
 Lalu untuk implementasinya kita masukkan fungsi-fungsi ini kedalam setiap fungsi system call yang ada.
+
+#
+### Gambar
+![41](https://user-images.githubusercontent.com/31863229/121061886-a2a81380-c7ee-11eb-87d7-e15ea1e5b1aa.PNG)
 
 #
 ### Kendala
